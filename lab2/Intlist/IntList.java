@@ -79,21 +79,45 @@ public class IntList {
      * Returns a list consisting of the elements of A followed by the
      * *  elements of B.  May modify items of A. Don't use 'new'.
      */
-
+    /** Destructive */
     public static IntList dcatenate(IntList A, IntList B) {
-        //TODO:  fill in method
-        return null;
+        IntList p = A;
+        /** Iterate to the end of A. */
+        while (p.rest != null) {
+            p = p.rest;
+        }
+        /** Copy B to A. */
+        while (B != null) {
+            p.rest = new IntList(B.first, null);
+            p = p.rest;
+            B = B.rest;
+        }
+        return A;
     }
 
     /**
      * Returns a list consisting of the elements of A followed by the
      * * elements of B.  May NOT modify items of A.  Use 'new'.
      */
+    /** Non-destructive */
     public static IntList catenate(IntList A, IntList B) {
-        //TODO:  fill in method
-        return null;
+        /** Copy A to N. */
+        IntList N = new IntList(A.first, null);
+        IntList ptN = N;
+        A = A.rest;
+        while (A != null) {
+            ptN.rest = new IntList(A.first, null);
+            ptN = ptN.rest;
+            A = A.rest;
+        }
+        /** Copy B to N. */
+        while (B != null) {
+            ptN.rest = new IntList(B.first, null);
+            ptN = ptN.rest;
+            B = B.rest;
+        }
+        return N;
     }
-
 
 
 
