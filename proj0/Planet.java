@@ -1,6 +1,8 @@
 /** all methods should be non-static. */
-/** all instance variables and methods
-  * will be declared using the public keyword. */
+/**
+ * all instance variables and methods
+ * will be declared using the public keyword.
+ */
 
 public class Planet {
     public double xxPos;
@@ -12,14 +14,14 @@ public class Planet {
     static final double G = 6.67e-11;
 
     public Planet(double xP, double yP, double xV,
-                  double yV, double m, String img) {
-                      xxPos = xP;
-                      yyPos = yP;
-                      xxVel = xV;
-                      yyVel = yV;
-                      mass = m;
-                      imgFileName = img;
-                  }
+            double yV, double m, String img) {
+        xxPos = xP;
+        yyPos = yP;
+        xxVel = xV;
+        yyVel = yV;
+        mass = m;
+        imgFileName = img;
+    }
 
     /** Initialize an identical Planet object (i.e. a copy). */
     public Planet(Planet p) {
@@ -35,17 +37,19 @@ public class Planet {
     public double calcDistance(Planet p) {
         double dx = p.xxPos - this.xxPos;
         double dy = p.yyPos - this.yyPos;
-        double r = Math.sqrt(dx*dx + dy*dy);
+        double r = Math.sqrt(dx * dx + dy * dy);
         return r;
     }
 
-    /** Returns a double describing the force
-      * exerted on this planet by the given planet. */
+    /**
+     * Returns a double describing the force
+     * exerted on this planet by the given planet.
+     */
     public double calcForceExertedBy(Planet p) {
         double r = this.calcDistance(p);
         double m1 = this.mass;
         double m2 = p.mass;
-        double F = (G * m1 * m2) / (r*r);
+        double F = (G * m1 * m2) / (r * r);
         return F;
     }
 
@@ -66,8 +70,10 @@ public class Planet {
         return Fy;
     }
 
-    /** Take in an array of Planets and calculate the net X and net Y force
-      * exerted by all planets in that array upon the current Planet. */
+    /**
+     * Take in an array of Planets and calculate the net X and net Y force
+     * exerted by all planets in that array upon the current Planet.
+     */
     public double calcNetForceExertedByX(Planet[] allP) {
         double Fx;
         double FNetx = 0;
@@ -94,9 +100,11 @@ public class Planet {
         return FNety;
     }
 
-    /** Determines how much the forces exerted on the planet will cause
-      * that planet to accelerate, and the resulting change in the planet’s
-      * velocity and position in a small period of time dt. */
+    /**
+     * Determines how much the forces exerted on the planet will cause
+     * that planet to accelerate, and the resulting change in the planet’s
+     * velocity and position in a small period of time dt.
+     */
     public void update(double dt, double FNetx, double FNety) {
         double aNetx = FNetx / this.mass;
         double aNety = FNety / this.mass;
@@ -104,5 +112,11 @@ public class Planet {
         this.yyVel = this.yyVel + dt * aNety;
         this.xxPos = this.xxPos + dt * this.xxVel;
         this.yyPos = this.yyPos + dt * this.yyVel;
+    }
+
+    /** Draw the Planet’s image at the Planet’s position. */
+    public void draw() {
+        String filename = "images/" + this.imgFileName;
+        StdDraw.picture(this.xxPos, this.yyPos, filename);
     }
 }
