@@ -81,7 +81,7 @@ public class IntList {
      */
     /** Destructive */
     public static IntList dcatenate(IntList A, IntList B) {
-        if (A == null && B == null) {
+        if (A == null) {
             return null;
         }
         IntList p = A;
@@ -104,7 +104,7 @@ public class IntList {
      */
     /** Non-destructive */
     public static IntList catenate(IntList A, IntList B) {
-        if (A == null && B == null) {
+        if (A == null) {
             return null;
         }
         /** Copy A to N. */
