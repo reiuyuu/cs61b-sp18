@@ -81,6 +81,9 @@ public class IntList {
      */
     /** Destructive */
     public static IntList dcatenate(IntList A, IntList B) {
+        if (A == null || B == null) {
+            return null;
+        }
         IntList p = A;
         /** Iterate to the end of A. */
         while (p.rest != null) {
@@ -101,6 +104,9 @@ public class IntList {
      */
     /** Non-destructive */
     public static IntList catenate(IntList A, IntList B) {
+        if (A == null || B == null) {
+            return null;
+        }
         /** Copy A to N. */
         IntList N = new IntList(A.first, null);
         IntList ptN = N;
