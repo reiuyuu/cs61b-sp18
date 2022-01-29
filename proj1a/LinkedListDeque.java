@@ -1,8 +1,8 @@
 public class LinkedListDeque<T> {
     public class Node {
-        public Node prev;
-        public T item;
-        public Node next;
+        private Node prev;
+        private T item;
+        private Node next;
 
         public Node(Node p, T i, Node n) {
             prev = p;
@@ -11,8 +11,8 @@ public class LinkedListDeque<T> {
         }
     }
 
-    public Node sentinel;
-    public int size;
+    private Node sentinel;
+    private int size;
 
     /** ==============
       * CONSTRUCTOR 
@@ -24,14 +24,6 @@ public class LinkedListDeque<T> {
         sentinel.prev = sentinel;
         sentinel.next = sentinel;
         size = 0;
-    }
-
-    /** Creates a new LinkedListDeque with first given item. */
-    public LinkedListDeque(T item) {
-        sentinel = new Node(null, null, null);
-        sentinel.next = new Node(sentinel, item, sentinel);
-        sentinel.prev = sentinel.next;
-        size = 1;
     }
 
     /** =============

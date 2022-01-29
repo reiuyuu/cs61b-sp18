@@ -18,15 +18,6 @@ public class ArrayDeque<T> {
         nextLast = 5;
     }
 
-    /** Creates an ArrayDeque with the specified item on the index of 4. */ 
-    public ArrayDeque(T item) {
-        items = (T[]) new Object[8];
-        items[4] = item;
-        size = 1;
-        nextFirst = 3;
-        nextLast = 5;
-    }
-
     /** =============
       * OPERATIONS
       * ============= */
