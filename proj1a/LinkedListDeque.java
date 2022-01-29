@@ -11,12 +11,20 @@ public class LinkedListDeque<T> {
         }
     }
 
+    public Node sentinel;
+    public int size;
+
     /** ==============
       * CONSTRUCTOR 
       * ============== */
-
-    public Node sentinel;
-    public int size;
+      
+    /** Creates an empty LinkedListDeque. */
+    public LinkedListDeque() {
+        sentinel = new Node(null, null, null);
+        sentinel.prev = sentinel;
+        sentinel.next = sentinel;
+        size = 0;
+    }
 
     /** Creates a new LinkedListDeque with first given item. */
     public LinkedListDeque(T item) {
@@ -24,14 +32,6 @@ public class LinkedListDeque<T> {
         sentinel.next = new Node(sentinel, item, sentinel);
         sentinel.prev = sentinel.next;
         size = 1;
-    }
-    
-    /** Creates an empty LinkedListDeque. */
-    public LinkedListDeque() {
-        sentinel = new Node(null, null, null);
-        sentinel.prev = sentinel;
-        sentinel.next = sentinel;
-        size = 0;
     }
 
     /** =============
@@ -65,10 +65,9 @@ public class LinkedListDeque<T> {
     /** Prints the items in the deque from first to last, separated by a space. */
     public void printDeque() {
         Node p = sentinel.next;
-
         /** Stop at the second-to-last item so that there won't be extra whitespace
           * but a new line. */
-        for (int i = 0; i < size-1; i++) {
+        for (int i = 0; i < (size - 1); i++) {
             System.out.print(p.item + " ");
             p = p.next;
         }
@@ -86,7 +85,6 @@ public class LinkedListDeque<T> {
         sentinel.next = sentinel.next.next;
         sentinel.next.prev = sentinel;
         size--;
-
         return removedItem;
     }
 
@@ -101,7 +99,6 @@ public class LinkedListDeque<T> {
         sentinel.prev = sentinel.prev.prev;
         sentinel.prev.next = sentinel;
         size--;
-
         return removedItem;
     }
 
@@ -119,7 +116,6 @@ public class LinkedListDeque<T> {
             p = p.next;
             index--;
         }
-
         return p.item;
     }
 
