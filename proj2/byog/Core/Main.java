@@ -1,5 +1,6 @@
 package byog.Core;
 
+import byog.TileEngine.TERenderer;
 import byog.TileEngine.TETile;
 
 /** This is the main entry point for the program. This class simply parses
@@ -14,6 +15,12 @@ public class Main {
         } else if (args.length == 1) {
             Game game = new Game();
             TETile[][] worldState = game.playWithInputString(args[0]);
+
+            // for testing
+            TERenderer ter = new TERenderer();
+            ter.initialize(game.width, game.height);
+            ter.renderFrame(worldState);
+
             System.out.println(TETile.toString(worldState));
         } else {
             Game game = new Game();
