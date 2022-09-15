@@ -1,13 +1,13 @@
 package byog.Core;
 
-import java.util.List;
-import java.util.Deque;
-import java.util.Map;
-import java.util.Set;
 import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.Random;
 
@@ -39,126 +39,95 @@ import byog.TileEngine.Tileset;
 /// The end result of this is a multiply-connected dungeon with rooms and lots
 /// of winding corridors.
 public class MapGenerator extends StageBuilder {
+    private static final int numRoomTries = 50;
+    private static final int extraConnectorChance = 40;
+    private static final int roomExtraSize = 0;
+    private static final int windingPercent = 60;
+
     private final int width;
     private final int height;
-
-    public final long seed = 174114077;
-    public final Random r = new Random(seed);
-
-    private int numRoomTries = 50;
-
-    /// The inverse chance of adding a connector between two regions that have
-    /// already been joined. Increasing this leads to more loosely connected
-    /// dungeons.
-    private int extraConnectorChance = 25;
-
-    /// Increasing this allows rooms to be larger.
-    private int roomExtraSize = -1;
-
-    private int windingPercent = 75;
-
-    private List<Room> _rooms = new ArrayList<Room>();
+    private final Random r;
     
-    /// For each open position in the dungeon, the index of the connected region
-    /// that that position is a part of.
-    private static Map<Position, Integer> _regions;
+    private TETile[][] _map;
+    private Position _exit;
+    private Player _player;
+    private List<Room> _rooms;
+    private Map<Position, Integer> _regions;
+    private int _currentRegion;
     
-    /// The index of the current region being carved.
-    private static int _currentRegion = -1;
-    
-    public MapGenerator(int width, int height) {
+    public MapGenerator(int width, int height, long seed) {
         this.width = width;
         this.height = height;
+        this.r = new Random(seed);
+        generate();
     }
 
-    public TETile[][] generate() {
-        
-        if (width % 2 == 0 || height % 2 == 0) {
-            throw new IllegalArgumentException("Width and height must be odd.");
+    public TETile[][] getMap() {
+        return _map;
+    }
+
+    public TETile getTile(Position pos) {
+        return getTile(_map, pos);
+    }
+
+    public int checkStatus() {
+        if (_player.pos.equals(_exit)) return 1;
+        return 0;
+    }
+
+    public void move(char c) {
+        switch (c) {
+            case 'W':
+                _player.moveUp(_map);
+                break;
+            case 'A':
+                _player.moveLeft(_map);
+                break;
+            case 'S':
+                _player.moveDown(_map);
+                break;
+            case 'D':
+                _player.moveRight(_map);
+                break;
+            default:
         }
-        
-        TETile[][] map = new TETile[width][height];
-        
-        fill(map, Tileset.WALL);
+    }
+
+    private void generate() {
+        if (width % 2 == 0 || height % 2 == 0) {
+            throw new IllegalArgumentException("The map must be odd-sized.");
+        }
+
+        _map = new TETile[width][height];
+
+        fill(_map, Tileset.WALL);
+        _rooms = new ArrayList<Room>();
         _regions = new HashMap<>();
-        
-        addRoom(map);
+        _currentRegion = -1;
+
+        addRooms();
 
         // Fill in the rest of the stage with mazes.
         for (int y = 1; y < height; y += 2) {
             for (int x = 1; x < width; x += 2) {
                 Position pos = new Position(x, y);
-                if (getTile(map, pos) != Tileset.WALL) {
-                    continue;
-                }
-                growMaze(map, pos);
+                if (!getTile(_map, pos).equals(Tileset.WALL)) continue;
+                growMaze(pos);
             }
         }
 
-        connectRegions(map);
-        removeDeadEnds(map);
-        removeOuterWalls(map);
-        addExits(map);
-        addPlayer(map);
+        connectRegions();
+        removeDeadEnds();
+        removeInnerWalls();
+        
+        // TODO: _rooms.forEach(onDecorateRoom);
 
-        // TODO: onDecorateRoom
-        // _rooms.forEach(onDecorateRoom);
-
-        return map;
-    }
-
-    // TODO: onDecorateRoom
-    // void onDecorateRoom(Rect room) {}
-
-    /// Implementation of the "growing tree" algorithm from here:
-    /// http://www.astrolog.org/labyrnth/algrithm.htm.
-    private void growMaze(TETile[][] map, Position start) {
-        Deque<Position> cells = new LinkedList<>();
-        Position lastDir = null;
-
-        startRegion();
-        carve(map, start);
-
-        cells.add(start);
-        while (!cells.isEmpty()) {
-            Position cell = cells.getLast();
-
-            // See which adjacent cells are open.
-            List<Position> unmadeCells = new ArrayList<>();
-
-            for (Position dir : Position.CARDINALS) {
-                if (canCarve(map, cell, dir)) {
-                    unmadeCells.add(dir);
-                }
-            }
-
-            if (!unmadeCells.isEmpty()) {
-                // Based on how "windy" passages are, try to prefer carving in the
-                // same direction.
-                Position dir;
-                if (unmadeCells.contains(lastDir) && RandomUtils.uniform(r, 100) > windingPercent) {
-                    dir = lastDir;
-                } else {
-                    dir = unmadeCells.get(RandomUtils.uniform(r, unmadeCells.size()));
-                }
-
-                carve(map, cell.turn(dir));
-                carve(map, cell.turn(dir).turn(dir));
-
-                cells.add(cell.turn(dir).turn(dir));
-                lastDir = dir;
-            } else {
-                // No adjacent unmade cells.
-                cells.removeLast();
-
-                // This path has ended.
-                lastDir = null;
-            }
-        }
+        addExits();
+        addPlayer();
     }
 
     /// Places rooms ignoring the existing maze corridors.
-    private void addRoom(TETile[][] map) {
+    private void addRooms() {
         for (int i = 0; i < numRoomTries; i++) {
             // Pick a random room size. The funny math here does two things:
             // - It makes sure rooms are odd-sized to line up with maze.
@@ -179,9 +148,8 @@ public class MapGenerator extends StageBuilder {
             int x = RandomUtils.uniform(r, (width - w) / 2) * 2 + 1;
             int y = RandomUtils.uniform(r, (height - h) / 2) * 2 + 1;
 
-            Room room = new Room(new Position(x, y), w, h);
+            Room room = new Room(new Position(x, y), w, h).fixOutOfBounds(_map);
 
-            // prevent rooms from overlapping.
             boolean overlaps = false;
             for (Room other : _rooms) {
                 if (room.isOverlapTo(other)) {
@@ -190,33 +158,65 @@ public class MapGenerator extends StageBuilder {
                 }
             }
 
-            if (overlaps) {
-                continue;
-            }
-
-            // TODO: optimize
-            // prevent rooms from out of bounds.
-            if (room.pos.x + room.w > width - 1) {
-                room.w = width - 1 - room.pos.x;
-            }
-
-            if (room.pos.y + room.h > height - 1) {
-                room.h = height - 1 - room.pos.y;
-            }
+            if (overlaps) continue;
 
             _rooms.add(room);
 
             startRegion();
             for (int rx = room.pos.x; rx < room.pos.x + room.w; rx++) {
                 for (int ry = room.pos.y; ry < room.pos.y + room.h; ry++) {
-                    Position pos = new Position(rx, ry);
-                    carve(map, pos);
+                    carve(new Position(rx, ry));
                 }
             }
         }
     }
 
-    private void connectRegions(TETile[][] map) {
+    /// Implementation of the "growing tree" algorithm from here:
+    /// http://www.astrolog.org/labyrnth/algrithm.htm.
+    private void growMaze(Position start) {
+        Deque<Position> cells = new LinkedList<>();
+        Position lastDir = null;
+
+        startRegion();
+        carve(start);
+
+        cells.add(start);
+        while (!cells.isEmpty()) {
+            Position cell = cells.getLast();
+
+            // See which adjacent cells are open.
+            List<Position> unmadeCells = new ArrayList<>();
+
+            for (Position dir : Position.CARDINALS) {
+                if (canCarve(cell, dir)) unmadeCells.add(dir);
+            }
+
+            if (!unmadeCells.isEmpty()) {
+                // Based on how "windy" passages are, try to prefer carving in the
+                // same direction.
+                Position dir;
+                if (unmadeCells.contains(lastDir) && RandomUtils.uniform(r, 100) > windingPercent) {
+                    dir = lastDir;
+                } else {
+                    dir = unmadeCells.get(RandomUtils.uniform(r, unmadeCells.size()));
+                }
+
+                carve(cell.turn(dir));
+                carve(cell.turn(dir).turn(dir));
+
+                cells.add(cell.turn(dir).turn(dir));
+                lastDir = dir;
+            } else {
+                // No adjacent unmade cells.
+                cells.removeLast();
+
+                // This path has ended.
+                lastDir = null;
+            }
+        }
+    }
+
+    private void connectRegions() {
         // Find all of the tiles that can connect two (or more) regions.
         Map<Position, Set<Integer>> connectorRegions = new HashMap<>();
         for (int x = 1; x < width - 1; x++) {
@@ -224,9 +224,7 @@ public class MapGenerator extends StageBuilder {
                 Position pos = new Position(x, y);
 
                 // Can't already be part of a region.
-                if (getTile(map, pos) != Tileset.WALL) {
-                    continue;
-                }
+                if (!getTile(_map, pos).equals(Tileset.WALL)) continue;
 
                 Set<Integer> regions = new HashSet<>();
                 for (Position dir : Position.CARDINALS) {
@@ -236,9 +234,7 @@ public class MapGenerator extends StageBuilder {
                     }
                 }
 
-                if (regions.size() < 2) {
-                    continue;
-                }
+                if (regions.size() < 2) continue;
 
                 connectorRegions.put(pos, regions);
             }
@@ -260,7 +256,7 @@ public class MapGenerator extends StageBuilder {
             Position connector = connectors.get(RandomUtils.uniform(r, connectors.size()));
 
             // Carve the connection.
-            addJunction(map, connector);
+            addJunction(connector);
 
             // Merge the connected regions. We'll pick one region (arbitrarily) and
             // map all of the other regions to its index.
@@ -284,39 +280,33 @@ public class MapGenerator extends StageBuilder {
             connectors.removeIf((pos) -> {
                 // Don't allow connectors right next to each other.
                 for (Position dir : Position.CARDINALS) {
-                    if (connector.turn(dir).x == pos.x && connector.turn(dir).y == pos.y) {
-                        return true;
-                    }
+                    if (connector.turn(dir).equals(pos)) return true;
                 }
                 
                 // If the connector no long spans different regions, we don't need it.
                 Set<Integer> SpansRegions = connectorRegions.get(pos).stream().map((region) -> merged.get(region)).collect(Collectors.toSet());
 
-                if (SpansRegions.size() > 1) {
-                    return false;
-                }
+                if (SpansRegions.size() > 1) return false;
 
                 // This connecter isn't needed, but connect it occasionally so that the
                 // dungeon isn't singly-connected.
-                if (RandomUtils.uniform(r, extraConnectorChance) < 1) {
-                    addJunction(map, pos);
-                }
+                if (RandomUtils.uniform(r, extraConnectorChance) < 1) addJunction(pos);
 
                 return true;
             });
         }
     }
 
-    private void addJunction(TETile[][] map, Position pos) {
+    private void addJunction(Position pos) {
         if (RandomUtils.uniform(r, 4) < 1) {
             TETile tile = (RandomUtils.uniform(r, 3) < 1) ? Tileset.FLOOR : Tileset.FLOOR;
-            setTile(map, pos, tile);
+            setTile(_map, pos, tile);
         } else {
-            setTile(map, pos, Tileset.FLOOR);
+            setTile(_map, pos, Tileset.FLOOR);
         }
     }
 
-    private void removeDeadEnds(TETile[][] map) {
+    private void removeDeadEnds() {
         boolean done = false;
 
         while (!done) {
@@ -326,62 +316,18 @@ public class MapGenerator extends StageBuilder {
                 for (int y = 1; y < height - 1; y++) {
                     Position pos = new Position(x, y);
 
-                    if (getTile(map, pos) == Tileset.WALL) {
-                        continue;
-                    }
+                    if (getTile(_map, pos).equals(Tileset.WALL)) continue;
 
                     // If it only has one exit, it's a dead end.
                     int exits = 0;
                     for (Position dir : Position.CARDINALS) {
-                        if (getTile(map, pos.turn(dir)) != Tileset.WALL) {
-                            exits++;
-                        }
+                        if (!getTile(_map, pos.turn(dir)).equals(Tileset.WALL)) exits++;
                     }
 
-                    if (exits != 1) {
-                        continue;
-                    }
+                    if (exits != 1) continue;
 
                     done = false;
-
-                    setTile(map, pos, Tileset.WALL);
-                }
-            }
-        }
-    }
-
-    private void removeOuterWalls(TETile[][] map) {
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                Position pos = new Position(x, y);
-                if (pos.isInnerWall(map)) {
-                    setTile(map, pos, Tileset.NOTHING);
-                }
-            }
-        }
-    }
-
-    private void addExits(TETile[][] map) {
-        for (int y = height - 1; y >= 0 ; y--) {
-            for (int x = width - 1; x >= 0; x--) {
-                Position pos = new Position(x, y);
-                for (Position dir : Position.CARDINALS) {
-                    if (getTile(map, pos.turn(dir).fixOutOfBounds(map)) == Tileset.FLOOR) {
-                        setTile(map, pos, Tileset.LOCKED_DOOR);
-                        return;
-                    }
-                }
-            }
-        }
-    }
-
-    private void addPlayer(TETile[][] map) {
-        for (int y = height / 4; y < height / 2; y++) {
-            for (int x = width / 4; x < width / 2; x++) {
-                Position pos = new Position(x, y);
-                if (getTile(map, pos) == Tileset.FLOOR) {
-                    setTile(map, pos, Tileset.PLAYER);
-                    return;
+                    setTile(_map, pos, Tileset.WALL);
                 }
             }
         }
@@ -391,23 +337,58 @@ public class MapGenerator extends StageBuilder {
     /// [Cell] at [pos] to the adjacent Cell facing [direction]. Returns `true`
     /// if the starting Cell is in bounds and the destination Cell is filled
     /// (or out of bounds).</returns>
-    boolean canCarve(TETile[][] map, Position pos, Position dir) {
+    private boolean canCarve(Position pos, Position dir) {
         // Must end in bounds.
-        if (!(pos.turn(dir).turn(dir).turn(dir)).isInBounds(map)) {
-            return false;
-        }
+        if (!(pos.turn(dir).turn(dir).turn(dir)).isInBounds(_map)) return false;
 
         // Destination must not be open.
-        return getTile(map, pos.turn(dir).turn(dir)) == Tileset.WALL;
+        return getTile(_map, pos.turn(dir).turn(dir)).equals(Tileset.WALL);
     }
 
     private void startRegion() {
         _currentRegion++;
     }
 
-    public void carve(TETile[][] map, Position pos) {
+    private void carve(Position pos) {
         TETile tile = Tileset.FLOOR;
-        setTile(map, pos, tile);
+        setTile(_map, pos, tile);
         _regions.put(pos, _currentRegion);
+    }
+
+    private void removeInnerWalls() {
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                Position pos = new Position(x, y);
+                if (pos.isInnerWall(_map)) setTile(_map, pos, Tileset.NOTHING);
+            }
+        }
+    }
+
+    private void addExits() {
+        for (int y = height - 1; y >= 0 ; y--) {
+            for (int x = width - 1; x >= 0; x--) {
+                Position pos = new Position(x, y);
+                for (Position dir : Position.CARDINALS) {
+                    if (getTile(_map, pos.turn(dir).fixOutOfBounds(_map)).equals(Tileset.FLOOR)) {
+                        setTile(_map, pos, Tileset.LOCKED_DOOR);
+                        _exit = pos;
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    private void addPlayer() {
+        for (int y = height / 4; y < height / 2; y++) {
+            for (int x = width / 4; x < width / 2; x++) {
+                Position pos = new Position(x, y);
+                if (getTile(_map, pos).equals(Tileset.FLOOR)) {
+                    setTile(_map, pos, Tileset.PLAYER);
+                    _player = new Player(pos);
+                    return;
+                }
+            }
+        }
     }
 }

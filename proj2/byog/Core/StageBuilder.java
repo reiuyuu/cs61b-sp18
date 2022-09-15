@@ -1,15 +1,18 @@
 package byog.Core;
 
+import java.io.Serializable;
+
 import byog.TileEngine.TETile;
 
-abstract class StageBuilder {
+abstract class StageBuilder implements Serializable {
+    private static final long serialVersionUID = 1234567890L;
 
     public TETile getTile(TETile[][] map, Position pos) {
         return map[pos.x][pos.y];
     }
 
-    public void setTile(TETile[][] map, Position pos, TETile type) {
-        map[pos.x][pos.y] = type;
+    public void setTile(TETile[][] map, Position pos, TETile tile) {
+        map[pos.x][pos.y] = tile;
     }
 
     public void fill(TETile[][] map, TETile tile) {

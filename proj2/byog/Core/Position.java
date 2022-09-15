@@ -4,16 +4,13 @@ import byog.TileEngine.TETile;
 import byog.TileEngine.Tileset;
 
 public class Position extends StageBuilder {
-    public int x;
-    public int y;
-
     public static final Position[] CARDINALS = new Position[] {
             new Position(1, 0),
             new Position(0, 1),
             new Position(-1, 0),
             new Position(0, -1)
     };
-
+    
     public static final Position[] AROUNDS = new Position[] {
             new Position(1, 0),
             new Position(0, 1),
@@ -25,6 +22,9 @@ public class Position extends StageBuilder {
             new Position(-1, -1)
     };
 
+    public int x;
+    public int y;
+
     public Position(int x, int y) {
         this.x = x;
         this.y = y;
@@ -32,10 +32,6 @@ public class Position extends StageBuilder {
     
     public Position turn(Position dir) {
         return new Position(this.x + dir.x, this.y + dir.y);
-    }
-
-    public boolean isInBounds(TETile[][] map) {
-        return this.x >= 0 && this.x < map.length && this.y >= 0 && this.y < map[0].length;
     }
 
     public Position fixOutOfBounds(TETile[][] map) {
@@ -47,17 +43,17 @@ public class Position extends StageBuilder {
         return this;
     }
 
+    public boolean isInBounds(TETile[][] map) {
+        return this.x >= 0 && this.x < map.length && this.y >= 0 && this.y < map[0].length;
+    }
+
     public boolean isInnerWall(TETile[][] map) {
-        if (getTile(map, this) != Tileset.WALL) {
-            return false;
-        }
+        if (!getTile(map, this).equals(Tileset.WALL)) return false;
         
         for (Position dir : Position.AROUNDS) {
-            Position pos = this.turn(dir).fixOutOfBounds(map);;
-            TETile type = getTile(map, pos);
-            if (type != Tileset.WALL && type != Tileset.NOTHING) {
-                return false;
-            }
+            Position pos = this.turn(dir).fixOutOfBounds(map);
+            TETile tile = getTile(map, pos);
+            if (!tile.equals(Tileset.WALL) && !tile.equals(Tileset.NOTHING)) return false;
         }
 
         return true;
@@ -65,17 +61,14 @@ public class Position extends StageBuilder {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (getClass() != obj.getClass()) return false;
+
         Position other = (Position) obj;
-        if (x != other.x)
-            return false;
-        if (y != other.y)
-            return false;
+        if (x != other.x) return false;
+        if (y != other.y) return false;
+
         return true;
     }
 
@@ -85,6 +78,7 @@ public class Position extends StageBuilder {
         int result = 1;
         result = prime * result + x;
         result = prime * result + y;
+
         return result;
     }
 }
