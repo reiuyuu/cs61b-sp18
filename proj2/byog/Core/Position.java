@@ -5,25 +5,41 @@ import byog.TileEngine.Tileset;
 
 public class Position extends StageBuilder {
     public static final Position[] CARDINALS = new Position[] {
-            new Position(1, 0),
-            new Position(0, 1),
-            new Position(-1, 0),
-            new Position(0, -1)
+        new Position(1, 0),
+        new Position(0, 1),
+        new Position(-1, 0),
+        new Position(0, -1)
     };
     
     public static final Position[] AROUNDS = new Position[] {
-            new Position(1, 0),
-            new Position(0, 1),
-            new Position(-1, 0),
-            new Position(0, -1),
-            new Position(1, 1),
-            new Position(-1, 1),
-            new Position(1, -1),
-            new Position(-1, -1)
+        new Position(1, 0),
+        new Position(0, 1),
+        new Position(-1, 0),
+        new Position(0, -1),
+        new Position(1, 1),
+        new Position(-1, 1),
+        new Position(1, -1),
+        new Position(-1, -1)
     };
 
-    public int x;
-    public int y;
+    private int x;
+    private int y;
+
+    public int getX() {
+        return x;
+    }
+
+    public void setX(int x) {
+        this.x = x;
+    }
+
+    public int getY() {
+        return y;
+    }
+
+    public void setY(int y) {
+        this.y = y;
+    }
 
     public Position(int x, int y) {
         this.x = x;

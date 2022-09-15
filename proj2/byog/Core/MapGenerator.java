@@ -38,10 +38,20 @@ import byog.TileEngine.Tileset;
 ///
 /// The end result of this is a multiply-connected dungeon with rooms and lots
 /// of winding corridors.
+///
+/// The idea is port from a procedural dungeon generator.
+/// @source http://journal.stuffwithstuff.com/2014/12/21/rooms-and-mazes/
 public class MapGenerator extends StageBuilder {
     private static final int numRoomTries = 50;
+
+    /// The inverse chance of adding a connector between two regions that have
+    /// already been joined. Increasing this leads to more loosely connected
+    /// dungeons.
     private static final int extraConnectorChance = 40;
+
+    /// Increasing this allows rooms to be larger.
     private static final int roomExtraSize = 0;
+
     private static final int windingPercent = 60;
 
     private final int width;
@@ -52,7 +62,12 @@ public class MapGenerator extends StageBuilder {
     private Position _exit;
     private Player _player;
     private List<Room> _rooms;
+
+    /// For each open position in the dungeon, the index of the connected region
+    /// that that position is a part of.
     private Map<Position, Integer> _regions;
+
+    /// The index of the current region being carved.
     private int _currentRegion;
     
     public MapGenerator(int width, int height, long seed) {
@@ -71,7 +86,7 @@ public class MapGenerator extends StageBuilder {
     }
 
     public int checkStatus() {
-        if (_player.pos.equals(_exit)) return 1;
+        if (_player.getPos().equals(_exit)) return 1;
         return 0;
     }
 
@@ -163,8 +178,8 @@ public class MapGenerator extends StageBuilder {
             _rooms.add(room);
 
             startRegion();
-            for (int rx = room.pos.x; rx < room.pos.x + room.w; rx++) {
-                for (int ry = room.pos.y; ry < room.pos.y + room.h; ry++) {
+            for (int rx = room.getPos().getX(); rx < room.getPos().getX() + room.getW(); rx++) {
+                for (int ry = room.getPos().getY(); ry < room.getPos().getY() + room.getH(); ry++) {
                     carve(new Position(rx, ry));
                 }
             }
@@ -260,9 +275,11 @@ public class MapGenerator extends StageBuilder {
 
             // Merge the connected regions. We'll pick one region (arbitrarily) and
             // map all of the other regions to its index.
-            Set<Integer> regions = connectorRegions.get(connector).stream().map((region) -> merged.get(region)).collect(Collectors.toSet());
+            Set<Integer> regions = connectorRegions.get(connector).stream()
+                    .map((region) -> merged.get(region)).collect(Collectors.toSet());
             int dest = regions.iterator().next();
-            Set<Integer> sources = regions.stream().filter((region) -> region != dest).collect(Collectors.toSet());
+            Set<Integer> sources = regions.stream()
+                    .filter((region) -> region != dest).collect(Collectors.toSet());
 
             // Merge all of the affected regions. We have to look at *all* of the
             // regions because other regions may have previously been merged with
@@ -284,9 +301,10 @@ public class MapGenerator extends StageBuilder {
                 }
                 
                 // If the connector no long spans different regions, we don't need it.
-                Set<Integer> SpansRegions = connectorRegions.get(pos).stream().map((region) -> merged.get(region)).collect(Collectors.toSet());
+                Set<Integer> spansRegions = connectorRegions.get(pos).stream()
+                        .map((region) -> merged.get(region)).collect(Collectors.toSet());
 
-                if (SpansRegions.size() > 1) return false;
+                if (spansRegions.size() > 1) return false;
 
                 // This connecter isn't needed, but connect it occasionally so that the
                 // dungeon isn't singly-connected.
@@ -365,7 +383,7 @@ public class MapGenerator extends StageBuilder {
     }
 
     private void addExits() {
-        for (int y = height - 1; y >= 0 ; y--) {
+        for (int y = height - 1; y >= 0; y--) {
             for (int x = width - 1; x >= 0; x--) {
                 Position pos = new Position(x, y);
                 for (Position dir : Position.CARDINALS) {

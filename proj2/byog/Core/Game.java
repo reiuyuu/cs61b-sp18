@@ -29,7 +29,6 @@ public class Game {
         ter.initialize(WIDTH + XOFFSET, HEIGHT + YOFFSET, 0, 0);
         MapGenerator mg = null;
         
-        // menu 
         drawMenuFrame("", "");
         switch (solicitNLQ()) {
             case 'N':
@@ -40,10 +39,10 @@ public class Game {
                 break;
             case 'Q':
                 System.exit(0);
+                break;
             default:
         }
 
-        // play
         while (true) {
             if (mg.checkStatus() == 1) drawWin();
 
@@ -80,7 +79,6 @@ public class Game {
         MapGenerator mg = null;
         String s = null;
         
-        // menu
         input = input.toUpperCase();
         switch (input.charAt(0)) {
             case 'N':
@@ -93,10 +91,10 @@ public class Game {
                 break;
             case 'Q':
                 System.exit(0);
+                break;
             default:
         }
         
-        // play
         for (int i = 0; i < s.length(); i++) {
             if (s.charAt(i) == ':' && (s.charAt(i + 1) == 'Q')) {
                 saveMap(mg);
@@ -118,7 +116,7 @@ public class Game {
             ObjectOutputStream os = new ObjectOutputStream(fs);
             os.writeObject(mg);
             os.close();
-        }  catch (FileNotFoundException e) {
+        } catch (FileNotFoundException e) {
             System.out.println("file not found");
             System.exit(0);
         } catch (IOException e) {
@@ -199,13 +197,11 @@ public class Game {
 
         StdDraw.clear(Color.BLACK);
         
-        // Draw the title
         Font mediumFont = new Font("Monaco", Font.BOLD, 48);
         StdDraw.setFont(mediumFont);
         StdDraw.setPenColor(Color.WHITE);
         StdDraw.text(midWidth, midHeight / 8 * 24, "CS61BYoG");
         
-        // Draw the options
         Font smallFont = new Font("Monaco", Font.BOLD, 24);
         StdDraw.setFont(smallFont);
         StdDraw.setPenColor(Color.WHITE);
@@ -213,7 +209,6 @@ public class Game {
         StdDraw.text(midWidth, midHeight + 2, "Load Game (L)");
         StdDraw.text(midWidth, midHeight, "Quit (Q)");
         
-        // Draw the seed
         StdDraw.text(midWidth, midHeight - 4, prompt);
         StdDraw.text(midWidth, midHeight - 6, seed);
 
@@ -222,18 +217,18 @@ public class Game {
     }
 
     private void drawDescription(TETile[][] map) {
-            int x = (int) StdDraw.mouseX();
-            int y = (int) StdDraw.mouseY();
+        int x = (int) StdDraw.mouseX();
+        int y = (int) StdDraw.mouseY();
 
-            if (!new Position(x, y).isInBounds(map)) return;
-            
-            Font smallFont = new Font("Monaco", Font.BOLD, 24);
-            StdDraw.setFont(smallFont);
-            StdDraw.setPenColor(Color.WHITE);
-            StdDraw.text(6, HEIGHT + 2, map[x][y].description());
+        if (!new Position(x, y).isInBounds(map)) return;
+        
+        Font smallFont = new Font("Monaco", Font.BOLD, 24);
+        StdDraw.setFont(smallFont);
+        StdDraw.setPenColor(Color.WHITE);
+        StdDraw.text(6, HEIGHT + 2, map[x][y].description());
 
-            StdDraw.enableDoubleBuffering();
-            StdDraw.show();
+        StdDraw.enableDoubleBuffering();
+        StdDraw.show();
     }
 
     private void drawWin() {

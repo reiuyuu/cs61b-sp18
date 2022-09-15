@@ -4,9 +4,17 @@ import byog.TileEngine.TETile;
 import byog.TileEngine.Tileset;
 
 public class Player extends StageBuilder {
-    public Position pos;
+    private Position pos;
     
     public Player(Position pos) {
+        this.pos = pos;
+    }
+    
+    public Position getPos() {
+        return pos;
+    }
+
+    public void setPos(Position pos) {
         this.pos = pos;
     }
 
