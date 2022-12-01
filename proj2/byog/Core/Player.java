@@ -40,9 +40,11 @@ public class Player extends StageBuilder {
 
         if (destTile.equals(Tileset.WALL)) {
             return;
+            
         } else if (destTile.equals(Tileset.LOCKED_DOOR)) {
             setTile(map, this.pos, Tileset.PLAYER);
             setTile(map, destPos, Tileset.UNLOCKED_DOOR);
+
         } else {
             setTile(map, this.pos, Tileset.FLOOR);
             setTile(map, destPos, Tileset.PLAYER);

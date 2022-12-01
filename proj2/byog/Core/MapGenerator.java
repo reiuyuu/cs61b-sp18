@@ -14,42 +14,21 @@ import java.util.Random;
 import byog.TileEngine.TETile;
 import byog.TileEngine.Tileset;
 
-/// The random dungeon generator.
-///
-/// Starting with a stage of solid walls, it works like so:
-///
-/// 1. Place a number of randomly sized and positioned rooms. If a room
-///    overlaps an existing room, it is discarded. Any remaining rooms are
-///    carved out.
-/// 2. Any remaining solid areas are filled in with mazes. The maze generator
-///    will grow and fill in even odd-shaped areas, but will not touch any
-///    rooms.
-/// 3. The result of the previous two steps is a series of unconnected rooms
-///    and mazes. We walk the stage and find every tile that can be a
-///    "connector". This is a solid tile that is adjacent to two unconnected
-///    regions.
-/// 4. We randomly choose connectors and open them or place a door there until
-///    all of the unconnected regions have been joined. There is also a slight
-///    chance to carve a connector between two already-joined regions, so that
-///    the dungeon isn't single connected.
-/// 5. The mazes will have a lot of dead ends. Finally, we remove those by
-///    repeatedly filling in any open tile that's closed on three sides. When
-///    this is done, every corridor in a maze actually leads somewhere.
-///
-/// The end result of this is a multiply-connected dungeon with rooms and lots
-/// of winding corridors.
-///
-/// The idea is port from a procedural dungeon generator.
-/// @source http://journal.stuffwithstuff.com/2014/12/21/rooms-and-mazes/
+// A map generator rewrites in Java with minor modifications, original from
+// a random dungeon generator by Bob Nystrom.
+//
+// @source https://github.com/munificent/hauberk/blob/db360d9efa714efb6d937c31953ef849c7394a39/lib/src/content/dungeon.dart
+
 public class MapGenerator extends StageBuilder {
+
     private static final int numRoomTries = 50;
 
-    /// The inverse chance of adding a connector between two regions that have
-    /// already been joined. Increasing this leads to more loosely connected
-    /// dungeons.
+    // The inverse chance of adding a connector between two regions that have
+    // already been joined. Increasing this leads to more loosely connected
+    // dungeons.
     private static final int extraConnectorChance = 40;
 
-    /// Increasing this allows rooms to be larger.
+    // Increasing this allows rooms to be larger.
     private static final int roomExtraSize = 0;
 
     private static final int windingPercent = 60;
@@ -59,15 +38,15 @@ public class MapGenerator extends StageBuilder {
     private final Random r;
     
     private TETile[][] _map;
+    private List<Room> _rooms;
     private Position _exit;
     private Player _player;
-    private List<Room> _rooms;
 
-    /// For each open position in the dungeon, the index of the connected region
-    /// that that position is a part of.
+    // For each open position in the dungeon, the index of the connected region
+    // that that position is a part of.
     private Map<Position, Integer> _regions;
 
-    /// The index of the current region being carved.
+    // The index of the current region being carved.
     private int _currentRegion;
     
     public MapGenerator(int width, int height, long seed) {
@@ -108,18 +87,21 @@ public class MapGenerator extends StageBuilder {
         }
     }
 
+    // Generate a new map.
     private void generate() {
         if (width % 2 == 0 || height % 2 == 0) {
             throw new IllegalArgumentException("The map must be odd-sized.");
         }
 
         _map = new TETile[width][height];
-
-        fill(_map, Tileset.WALL);
         _rooms = new ArrayList<Room>();
         _regions = new HashMap<>();
         _currentRegion = -1;
 
+        // Fill the map with WALL tile.
+        fill(_map, Tileset.WALL);
+
+        // Place a bunch of random non-overlapping rooms.
         addRooms();
 
         // Fill in the rest of the stage with mazes.
@@ -131,24 +113,26 @@ public class MapGenerator extends StageBuilder {
             }
         }
 
+        // Connect each of the mazes and rooms to their neighbors, with a
+        // chance to add some extra connections.
         connectRegions();
+
+        // Remove all of the dead ends and inner walls.
         removeDeadEnds();
         removeInnerWalls();
-        
-        // TODO: _rooms.forEach(onDecorateRoom);
 
-        addExits();
+        // Place an exit and a player.
+        addExit();
         addPlayer();
     }
 
-    /// Places rooms ignoring the existing maze corridors.
+    // Places rooms ignoring the existing maze corridors.
     private void addRooms() {
         for (int i = 0; i < numRoomTries; i++) {
             // Pick a random room size. The funny math here does two things:
             // - It makes sure rooms are odd-sized to line up with maze.
-            // - It avoids creating rooms that are too rectangular: too tall and
-            // narrow or too wide and flat.
-            // TODO: This isn't very flexible or tunable. Do something better here.
+            // - It avoids creating rooms that are too rectangular: too tall
+            //   and narrow or too wide and flat.
             int size = RandomUtils.uniform(r, 1, 3 + roomExtraSize) * 2 + 1;
             int rectangularity = RandomUtils.uniform(r, 0, 1 + size / 2) * 2;
             int w = size;
@@ -165,6 +149,7 @@ public class MapGenerator extends StageBuilder {
 
             Room room = new Room(new Position(x, y), w, h).fixOutOfBounds(_map);
 
+            // If this room overlaps an existing room, skip it.
             boolean overlaps = false;
             for (Room other : _rooms) {
                 if (room.isOverlapTo(other)) {
@@ -177,17 +162,16 @@ public class MapGenerator extends StageBuilder {
 
             _rooms.add(room);
 
+            // Dig it out.
             startRegion();
-            for (int rx = room.getPos().getX(); rx < room.getPos().getX() + room.getW(); rx++) {
-                for (int ry = room.getPos().getY(); ry < room.getPos().getY() + room.getH(); ry++) {
-                    carve(new Position(rx, ry));
-                }
+            for (Position pos : room.toArray()) {
+                carve(pos);
             }
         }
     }
 
-    /// Implementation of the "growing tree" algorithm from here:
-    /// http://www.astrolog.org/labyrnth/algrithm.htm.
+    // Implementation of the "growing tree" algorithm from here:
+    // http://www.astrolog.org/labyrnth/algrithm.htm.
     private void growMaze(Position start) {
         Deque<Position> cells = new LinkedList<>();
         Position lastDir = null;
@@ -207,10 +191,11 @@ public class MapGenerator extends StageBuilder {
             }
 
             if (!unmadeCells.isEmpty()) {
-                // Based on how "windy" passages are, try to prefer carving in the
-                // same direction.
+                // Based on how "windy" passages are, try to prefer carving in
+                // the same direction.
                 Position dir;
-                if (unmadeCells.contains(lastDir) && RandomUtils.uniform(r, 100) > windingPercent) {
+                if (unmadeCells.contains(lastDir)
+                    && RandomUtils.uniform(r, 100) > windingPercent) {
                     dir = lastDir;
                 } else {
                     dir = unmadeCells.get(RandomUtils.uniform(r, unmadeCells.size()));
@@ -351,10 +336,10 @@ public class MapGenerator extends StageBuilder {
         }
     }
 
-    /// Gets whether or not an opening can be carved from the given starting
-    /// [Cell] at [pos] to the adjacent Cell facing [direction]. Returns `true`
-    /// if the starting Cell is in bounds and the destination Cell is filled
-    /// (or out of bounds).</returns>
+    // Gets whether or not an opening can be carved from the given starting
+    // [Cell] at [pos] to the adjacent Cell facing [direction]. Returns `true`
+    // if the starting Cell is in bounds and the destination Cell is filled
+    // (or out of bounds).</returns>
     private boolean canCarve(Position pos, Position dir) {
         // Must end in bounds.
         if (!(pos.turn(dir).turn(dir).turn(dir)).isInBounds(_map)) return false;
@@ -382,7 +367,7 @@ public class MapGenerator extends StageBuilder {
         }
     }
 
-    private void addExits() {
+    private void addExit() {
         for (int y = height - 1; y >= 0; y--) {
             for (int x = width - 1; x >= 0; x--) {
                 Position pos = new Position(x, y);

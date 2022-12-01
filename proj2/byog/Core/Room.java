@@ -7,6 +7,26 @@ public class Room extends StageBuilder {
     private int w;
     private int h;
     
+    public Room(Position pos, int h, int w) {
+        this.pos = pos;
+        this.h = h;
+        this.w = w;
+    }
+
+    public Position[] toArray() {
+        Position[] room = new Position[w * h];
+
+        int i = 0;
+        for (int x = pos.getX(); x < pos.getX() + w; x++) {
+            for (int y = pos.getY(); y < pos.getY() + h; y++) {
+                room[i] = new Position(x, y);
+                i++;
+            }
+        }
+        
+        return room;
+    }
+
     public Position getPos() {
         return pos;
     }
@@ -29,12 +49,6 @@ public class Room extends StageBuilder {
 
     public void setH(int h) {
         this.h = h;
-    }
-
-    public Room(Position pos, int h, int w) {
-        this.pos = pos;
-        this.h = h;
-        this.w = w;
     }
 
     public boolean isOverlapTo(Room other) {

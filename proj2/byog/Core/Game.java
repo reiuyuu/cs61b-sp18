@@ -127,7 +127,6 @@ public class Game {
 
     private MapGenerator loadMap() {
         MapGenerator mg = null;
-
         File f = new File("./world.ser");
         if (f.exists()) {
             try {
